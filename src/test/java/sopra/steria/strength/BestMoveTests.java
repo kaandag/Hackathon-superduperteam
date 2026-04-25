@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Tag("strength")
-public class BestMoveTests {
+class BestMoveTests {
 
     static Stream<BestmovePuzzle> providePuzzles() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
