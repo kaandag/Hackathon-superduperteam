@@ -2,6 +2,7 @@ package sopra.steria.search;
 
 import knight.clubbing.core.BBoard;
 import knight.clubbing.core.BMove;
+import knight.clubbing.core.BPiece;
 import knight.clubbing.movegen.MoveGenerator;
 import sopra.steria.evaluation.BadEvaluator;
 import sopra.steria.evaluation.Evaluator;
@@ -13,6 +14,8 @@ import static sopra.steria.EngineConst.MATE_SCORE;
 
 public class Search {
 
+    private static final int MAX_PLY = 64;
+
     private volatile boolean stop;
     private long startTime;
     private SearchSetting setting;
@@ -20,6 +23,7 @@ public class Search {
 
     private final Evaluator evaluator;
     private final MoveOrderer moveOrderer;
+    private short[][] killerMoves;
 
     public Search() {
         this.evaluator = new BadEvaluator();
@@ -30,6 +34,7 @@ public class Search {
         this.startTime = System.currentTimeMillis();
         this.setting = setting;
         this.stop = false;
+        this.killerMoves = new short[MAX_PLY][2];
 
         SearchResult bestResult = new SearchResult();
         bestResult.setScore(-INF);
@@ -66,6 +71,7 @@ public class Search {
         this.nodes = 0;
 
         BMove[] moves = new MoveGenerator(board).generateMoves(false);
+        moveOrderer.orderMoves(moves, board, killerMoves[0]);
 
         for (BMove move : moves) {
             checkStop();
@@ -98,7 +104,7 @@ public class Search {
 
         BMove[] nextMoves = new MoveGenerator(board).generateMoves(false);
 
-        moveOrderer.orderMoves(nextMoves, board);
+        moveOrderer.orderMoves(nextMoves, board, killerMoves[ply]);
 
         if (nextMoves.length == 0) {
             if (board.isInCheck())
@@ -120,6 +126,14 @@ public class Search {
             alpha = Math.max(alpha, score);
 
             if (alpha >= beta) {
+                // Store killer move if it's a quiet move (not a capture)
+                if (board.getPieceBoards()[move.targetSquare()] == BPiece.none
+                        && move.moveFlag() != BMove.enPassantCaptureFlag) {
+                    if (killerMoves[ply][0] != move.value()) {
+                        killerMoves[ply][1] = killerMoves[ply][0];
+                        killerMoves[ply][0] = move.value();
+                    }
+                }
                 break;
             }
         }
